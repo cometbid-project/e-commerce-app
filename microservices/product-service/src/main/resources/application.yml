@@ -1,0 +1,17 @@
+server:
+  port: 8001
+
+spring:
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: product
+      auto-index-creation: true
+  jpa:
+    properties:  
+      hibernate:
+        ogm:
+          datastore:
+            create_database: true
+        

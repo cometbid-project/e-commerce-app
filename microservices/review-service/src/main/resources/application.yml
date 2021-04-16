@@ -1,0 +1,15 @@
+server:
+   port: 8003
+spring:
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: review
+      auto-index-creation: true
+  jpa:
+    properties:  
+      hibernate:
+        ogm:
+          datastore:
+            create_database: true
