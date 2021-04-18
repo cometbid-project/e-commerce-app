@@ -8,7 +8,7 @@
 		<groupId>com.ecommerce.project</groupId>
 		<artifactId>ecommerce-app</artifactId>
 		<version>0.0.1-SNAPSHOT</version> <!-- lookup parent from repository -->
-		<relativePath>../</relativePath>
+		<relativePath>../../</relativePath>
 	</parent>
 
 	<artifactId>review-service</artifactId>
@@ -47,7 +47,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.mapstruct</groupId>
-			<artifactId>mapstruct-jdk8</artifactId>
+			<artifactId>mapstruct</artifactId>
 			<version>1.3.1.Final</version>
 		</dependency>
 		<dependency>
