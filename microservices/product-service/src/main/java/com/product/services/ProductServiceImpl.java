@@ -43,7 +43,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductApi createProduct(ProductApi body) {
-        if (body.getProductId() < 1) throw new InvalidInputException("Invalid productId: " + body.getProductId());
+    	
+        if (body.getProductId() < 1) 
+        	throw new InvalidInputException("Invalid productId: " + body.getProductId());
 
         ProductEntity entity = mapper.apiToEntity(body);
         Mono<ProductApi> newEntity = repository.save(entity)
@@ -56,7 +58,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Mono<ProductApi> getProduct(int productId) {
-       if (productId < 1) throw new InvalidInputException("Invalid productId: " + productId);
+       if (productId < 1) 
+    	   throw new InvalidInputException("Invalid productId: " + productId);
 
         return repository.findByProductId(productId)
             .switchIfEmpty(error(new NotFoundException("No product found for productId: " + productId)))

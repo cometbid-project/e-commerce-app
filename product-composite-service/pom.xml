@@ -59,6 +59,16 @@
 			<artifactId>spring-cloud-starter-stream-kafka</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-webflux-core</artifactId>
+			<version>1.2.31</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-webflux-ui</artifactId>
+			<version>1.2.31</version>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
@@ -102,13 +112,7 @@
 		</plugins>
 	</build>
 
-	<!--  
-	<repositories>
-		<repository>
-			<id>jcenter-snapshots</id>
-			<name>jcenter</name>
-			<url>http://oss.jfrog.org/artifactory/oss-snapshot-local</url>
-		</repository>
-	</repositories>
-	-->
+	<!-- <repositories> <repository> <id>jcenter-snapshots</id> <name>jcenter</name> 
+		<url>http://oss.jfrog.org/artifactory/oss-snapshot-local</url> </repository> 
+		</repositories> -->
 </project>

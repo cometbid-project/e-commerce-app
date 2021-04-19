@@ -17,6 +17,5 @@ public class HelloCntrl {
     public Mono<String> postHello() {
         return Mono.just("Posting back..");
     }
-
     
 }
