@@ -59,6 +59,7 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
 
 		@Output(OUTPUT_REVIEWS)
 		MessageChannel outputReviews();
+
 	}
 
 	@Autowired

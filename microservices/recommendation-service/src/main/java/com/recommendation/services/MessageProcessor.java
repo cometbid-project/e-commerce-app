@@ -3,15 +3,15 @@ package com.recommendation.services;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.stream.annotation.EnableBinding;
-import org.springframework.cloud.stream.annotation.StreamListener;
-import org.springframework.cloud.stream.messaging.Sink;
+//import org.springframework.cloud.stream.annotation.EnableBinding;
+//import org.springframework.cloud.stream.annotation.StreamListener;
+//import org.springframework.cloud.stream.messaging.Sink;
 import com.product.service.api.core.recommendation.Recommendation;
 import com.product.service.api.core.recommendation.RecommendationService;
 import com.product.service.api.event.Event;
 import com.product.service.util.exceptions.EventProcessingException;
 
-@EnableBinding(Sink.class)
+//@EnableBinding(Sink.class)
 public class MessageProcessor {
 
     private static final Logger LOG = LoggerFactory.getLogger(MessageProcessor.class);
@@ -23,7 +23,7 @@ public class MessageProcessor {
         this.recommendationService = recommendationService;
     }
 
-    @StreamListener(target = Sink.INPUT)
+    //@StreamListener(target = Sink.INPUT)
     public void process(Event<Integer, Recommendation> event) {
 
         LOG.info("Process message created at {}...", event.getEventCreatedAt());
