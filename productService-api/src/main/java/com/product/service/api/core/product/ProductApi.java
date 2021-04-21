@@ -21,7 +21,7 @@ public class ProductApi {
         serviceAddress = null;
     }
     
-    public ProductApi(int productId, String name, int weight, String description, String serviceAddress ){
+    public ProductApi(int productId, String name, int weight, String description, String serviceAddress ) {
         this.productId = productId;
         this.name = name;
         this.weight = weight;

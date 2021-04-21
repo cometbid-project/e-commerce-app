@@ -33,7 +33,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
-    public Recommendation createRecommendation(Recommendation body) {
+    public Mono<Recommendation> createRecommendation(Recommendation body) {
 
         if (body.getProductId() < 1) throw new InvalidInputException("Invalid productId: " + body.getProductId());
 
@@ -45,7 +45,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                 ex -> new InvalidInputException("Duplicate key, Product Id: " + body.getProductId() + ", Recommendation Id:" + body.getRecommendationId()))
             .map(e -> mapper.entityToApi(e));
 
-        return newEntity.block();
+        return newEntity;
     }
 
     @Override
@@ -60,11 +60,13 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
-    public void deleteRecommendations(int productId) {
+    public Mono<Void> deleteRecommendations(int productId) {
 
         if (productId < 1) throw new InvalidInputException("Invalid productId: " + productId);
 
         log.debug("deleteRecommendations: tries to delete recommendations for the product with productId: {}", productId);
-        repository.deleteAll(repository.findByProductId(productId)).block();
+        repository.deleteAll(repository.findByProductId(productId)).subscribe();
+        
+        return Mono.empty();
     }
 }

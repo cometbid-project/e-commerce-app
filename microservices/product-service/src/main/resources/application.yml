@@ -1,12 +1,14 @@
 server:
   port: 8001
+server.error.include-message: always
+spring.application.name: product-service
 
 spring:
   data:
     mongodb:
       host: localhost
       port: 27017
-      database: product
+      database: product-db
       auto-index-creation: true
   jpa:
     properties:  
@@ -14,4 +16,73 @@ spring:
         ogm:
           datastore:
             create_database: true
-        
+
+# Messaging binders for the cloud streaming
+spring.cloud.stream:
+  defaultBinder: rabbit
+  default.contentType: application/json
+  bindings:
+    # Deprecated in spring-cloud 3.0+
+    input: # Use the function name as used below
+      destination: products
+      group: productsGroup
+    # Use the consumer function name as input to create destination and group in 3.0+
+    productConsumer-in-0:
+      destination: products
+      group: productsGroup
+      consumer:
+        partitioned: true
+    functionRouter-in-0:
+      destination: products
+      group: productsGroup
+      consumer:
+        partitioned: true
+    function.routing.enabled: true   
+    instanceCount: 2
+
+spring.cloud.stream.bindings.productConsumer-in-0.consumer:
+  maxAttempts: 3
+  backOffInitialInterval: 500
+  backOffMaxInterval: 1000
+  backOffMultiplier: 2.0
+
+spring.cloud.stream.rabbit.bindings.productConsumer-in-0.consumer:
+  autoBindDlq: true
+  republishToDlq: true
+
+spring.cloud.stream.kafka.bindings.productConsumer-in-0.consumer:
+  enableDlq: true
+
+spring.cloud.stream.kafka.binder:
+  brokers: 127.0.0.1
+  defaultBrokerPort: 9092
+
+spring.rabbitmq:
+  host: 127.0.0.1
+  port: 5672
+  username: guest
+  password: guest
+
+logging:
+  level:
+    root: INFO
+    com.product: DEBUG
+    org.springframework:
+      amqp: DEBUG
+      data.mongodb.core.MongoTemplate: DEBUG
+
+management.endpoint.health.show-details: "ALWAYS"
+management.endpoints.web.exposure.include: "*" # Lock this up in production
+---
+spring:
+  config:
+    activate:
+      on-profile:
+        - docker
+  profiles: docker
+  data.mongodb.host: mongodb
+  rabbitmq.host: rabbitmq
+  
+server.port: 8080
+
+spring.cloud.stream.kafka.binder.brokers: kafka        

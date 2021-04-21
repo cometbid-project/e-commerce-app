@@ -2,10 +2,11 @@ package com.product.service.api.core.recommendation;
 
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 public interface RecommendationService {
 
-    Recommendation createRecommendation(@RequestBody Recommendation body);
+    Mono<Recommendation> createRecommendation(@RequestBody Recommendation body);
 
     /**
      * Sample usage:
@@ -18,5 +19,5 @@ public interface RecommendationService {
     @GetMapping( value    = "/recommendation", produces = "application/json")
     Flux<Recommendation> getRecommendations(@RequestParam(value = "productId", required = true) int productId);
 
-    void deleteRecommendations(@RequestParam(value = "productId", required = true)  int productId);
+    Mono<Void> deleteRecommendations(@RequestParam(value = "productId", required = true)  int productId);
 }

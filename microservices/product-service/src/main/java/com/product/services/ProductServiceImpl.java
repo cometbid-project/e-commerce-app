@@ -42,7 +42,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductApi createProduct(ProductApi body) {
+    public Mono<ProductApi> createProduct(ProductApi body) {
     	
         if (body.getProductId() < 1) 
         	throw new InvalidInputException("Invalid productId: " + body.getProductId());
@@ -53,7 +53,7 @@ public class ProductServiceImpl implements ProductService {
               ex -> new InvalidInputException("Duplicate key, Product Id: " + body.getProductId()))
             .map(e -> mapper.entityToApi(e));
 
-        return newEntity.block();
+        return newEntity;
     }
 
     @Override
@@ -68,11 +68,13 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public void deleteProduct(int productId) {
+    public Mono<Void> deleteProduct(int productId) {
         if (productId < 1) throw new InvalidInputException("Invalid productId: " + productId);
 
         log.debug("deleteProduct: tries to delete an entity with productId: {}", productId);
-        repository.findByProductId(productId).log().map(e -> repository.delete(e)).flatMap(e -> e).block();
+        repository.findByProductId(productId).log().map(e -> repository.delete(e)).flatMap(e -> e).subscribe();
+        
+        return Mono.empty();
     }
     
     

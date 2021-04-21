@@ -11,10 +11,10 @@ import reactor.core.publisher.Mono;
  */
 public interface ProductService {
 
-	ProductApi createProduct(@RequestBody ProductApi body);
+	Mono<ProductApi> createProduct(@RequestBody ProductApi body);
 
 	@GetMapping(value = "/product/{productId}", produces = "application/json")
 	Mono<ProductApi> getProduct(@PathVariable int productId);
 
-	void deleteProduct(@PathVariable int productId);
+	Mono<Void> deleteProduct(@PathVariable int productId);
 }

@@ -1,5 +1,7 @@
-api:
 
+spring.application.name: product-composite-service
+
+api:
   common:
     version: 1.0.0
     title: Sample API
@@ -57,22 +59,30 @@ app:
     host: localhost
     port: 7003
 
+ # Messaging binders for the cloud streaming
 spring.cloud.stream:
   defaultBinder: rabbit
   default.contentType: application/json
   bindings:
-    output-products:
+    # Use the supplier function name as input to create destination and groups in 3.0+
+    productProducer-out-0:
       destination: products
       producer:
         required-groups: auditGroup
-    output-recommendations:
+        partitionKeyExpression: payload.id
+        partitionCount: 2
+    recommendationProducer-out-0:
       destination: recommendations
       producer:
         required-groups: auditGroup
-    output-reviews:
+        partitionKeyExpression: payload.id
+        partitionCount: 2
+    reviewProducer-out-0:
       destination: reviews
       producer:
         required-groups: auditGroup
+        partitionKeyExpression: payload.id
+        partitionCount: 2
 
 spring.cloud.stream.kafka.binder:
   brokers: 127.0.0.1
@@ -84,15 +94,32 @@ spring.rabbitmq:
   username: guest
   password: guest
 
+producer.supplier.enabled: true
+
+logging.level.org.springframework.amqp: DEBUG
+
+# Logging settings
 logging:
   level:
     root: INFO
-    se.magnus: DEBUG
+    com.product: DEBUG
+    org.springframework:
+      amqp: DEBUG
+      data.mongodb.core.MongoTemplate: DEBUG
 
+# Actuator endpoints
 management.endpoint.health.show-details: "ALWAYS"
-management.endpoints.web.exposure.include: "*"
+management.endpoints.web.exposure.include: "*" # Lock this up in production
+
 ---
-spring.profiles: docker
+spring:
+  config:
+    activate:
+      on-profile:
+        - docker
+  profiles: docker
+  rabbitmq.host: rabbitmq
+  cloud.stream.kafka.binder.brokers: kafka
 
 server.port: 8080
 
@@ -106,7 +133,3 @@ app:
   review-service:
     host: review
     port: 8080
-
-spring.rabbitmq.host: rabbitmq
-
-spring.cloud.stream.kafka.binder.brokers: kafka

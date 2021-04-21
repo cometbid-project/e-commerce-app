@@ -4,27 +4,38 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.health.Health;
-import org.springframework.cloud.stream.annotation.EnableBinding;
-import org.springframework.cloud.stream.annotation.Output;
-import org.springframework.messaging.MessageChannel;
-import org.springframework.messaging.support.MessageBuilder;
+//import org.springframework.cloud.stream.annotation.EnableBinding;
+//import org.springframework.cloud.stream.annotation.Output;
+
+import org.springframework.cloud.stream.function.StreamBridge;
+//import org.springframework.messaging.MessageChannel;
+//import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import com.product.comp.message.MyMessageHeaders;
 import com.product.service.api.core.product.ProductApi;
 import com.product.service.api.core.product.ProductService;
 import com.product.service.api.core.recommendation.Recommendation;
 import com.product.service.api.core.recommendation.RecommendationService;
 import com.product.service.api.core.review.Review;
 import com.product.service.api.core.review.ReviewService;
+import com.product.service.api.event.DataEvent;
 import com.product.service.api.event.Event;
+import com.product.service.api.event.EventType;
+import com.product.service.util.exceptions.BadRequestException;
 import com.product.service.util.exceptions.InvalidInputException;
 import com.product.service.util.exceptions.NotFoundException;
 import com.product.service.util.http.HttpErrorInfo;
 
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import static reactor.core.publisher.Flux.empty;
 import static com.product.service.api.event.Event.Type.CREATE;
@@ -32,7 +43,7 @@ import static com.product.service.api.event.Event.Type.DELETE;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@EnableBinding(ProductCompositeIntegration.MessageSources.class)
+//@EnableBinding(ProductCompositeIntegration.MessageSources.class)
 @Component
 public class ProductCompositeIntegration implements ProductService, RecommendationService, ReviewService {
 
@@ -43,13 +54,16 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
 	private final String recommendationServiceUrl;
 	private final String reviewServiceUrl;
 
-	private MessageSources messageSources;
+	private static final String OUTPUT_PRODUCTS = "productProducer-out-0";
+	private static final String OUTPUT_RECOMMENDATIONS = "recommendationProducer-out-0";
+	private static final String OUTPUT_REVIEWS = "reviewProducer-out-0";
 
+	// private MessageSources messageSources;
+	private final StreamBridge streamBridge;
+	private Boolean toProcess; 
+
+	/*
 	public interface MessageSources {
-
-		String OUTPUT_PRODUCTS = "output-products";
-		String OUTPUT_RECOMMENDATIONS = "output-recommendations";
-		String OUTPUT_REVIEWS = "output-reviews";
 
 		@Output(OUTPUT_PRODUCTS)
 		MessageChannel outputProducts();
@@ -61,9 +75,12 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
 		MessageChannel outputReviews();
 
 	}
+	*/
 
 	@Autowired
-	public ProductCompositeIntegration(WebClient.Builder webClient, ObjectMapper mapper, MessageSources messageSources,
+	public ProductCompositeIntegration(WebClient.Builder webClient, ObjectMapper mapper,
+			/* MessageSources messageSources,*/
+			StreamBridge streamBridge,
 
 			@Value("${app.product-service.host}") String productServiceHost,
 			@Value("${app.product-service.port}") int productServicePort,
@@ -72,22 +89,33 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
 			@Value("${app.recommendation-service.port}") int recommendationServicePort,
 
 			@Value("${app.review-service.host}") String reviewServiceHost,
-			@Value("${app.review-service.port}") int reviewServicePort) {
+			@Value("${app.review-service.port}") int reviewServicePort,
+			@Value("${producer.supplier.enabled}") Boolean toProcess) {
 
 		this.webClient = webClient.build();
 		this.mapper = mapper;
-		this.messageSources = messageSources;
-
+		//this.messageSources = messageSources;
+		this.streamBridge = streamBridge;
+		this.toProcess = toProcess;
+		
 		productServiceUrl = "http://" + productServiceHost + ":" + productServicePort;
 		recommendationServiceUrl = "http://" + recommendationServiceHost + ":" + recommendationServicePort;
 		reviewServiceUrl = "http://" + reviewServiceHost + ":" + reviewServicePort;
 	}
 
 	@Override
-	public ProductApi createProduct(ProductApi body) {
-		messageSources.outputProducts()
-				.send(MessageBuilder.withPayload(new Event(CREATE, body.getProductId(), body)).build());
-		return body;
+	public Mono<ProductApi> createProduct(ProductApi productPayload) {
+		DataEvent<String, ProductApi> eventPayload = new DataEvent<>(EventType.CREATE, null, productPayload);
+		Map<String, Object> headers = new HashMap<>();
+		headers.put("to_process", toProcess);		
+				
+		boolean sent = streamBridge.send(OUTPUT_PRODUCTS, createEventMessage(eventPayload, headers));
+
+		return sent ? Mono.just(productPayload) : Mono.error(new BadRequestException("Error streaming data"));
+		
+		//messageSources.outputProducts()
+			//	.send(MessageBuilder.withPayload(new Event(CREATE, body.getProductId(), body)).build());
+		//return body;
 	}
 
 	@Override
@@ -100,15 +128,30 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
 	}
 
 	@Override
-	public void deleteProduct(int productId) {
-		messageSources.outputProducts().send(MessageBuilder.withPayload(new Event(DELETE, productId, null)).build());
+	public Mono<Void> deleteProduct(int productId) {
+		DataEvent<String, ProductApi> eventPayload = new DataEvent<>(EventType.DELETE, String.valueOf(productId), null);
+		Map<String, Object> headers = new HashMap<>();
+		headers.put("to_process", toProcess);		
+				
+		boolean sent = streamBridge.send(OUTPUT_PRODUCTS, createEventMessage(eventPayload, headers));
+		        
+        return Mono.empty();
+		//messageSources.outputProducts().send(MessageBuilder.withPayload(new Event(DELETE, productId, null)).build());
 	}
 
 	@Override
-	public Recommendation createRecommendation(Recommendation body) {
-		messageSources.outputRecommendations()
-				.send(MessageBuilder.withPayload(new Event(CREATE, body.getProductId(), body)).build());
-		return body;
+	public Mono<Recommendation> createRecommendation(Recommendation recommendationPayload) {
+		DataEvent<String, Recommendation> eventPayload = new DataEvent<>(EventType.CREATE, null, recommendationPayload);
+		Map<String, Object> headers = new HashMap<>();
+		headers.put("to_process", toProcess);		
+				
+		boolean sent = streamBridge.send(OUTPUT_RECOMMENDATIONS, createEventMessage(eventPayload, headers));
+
+		return sent ? Mono.just(recommendationPayload) : Mono.error(new BadRequestException("Error streaming data"));
+		
+		//messageSources.outputRecommendations()
+				//.send(MessageBuilder.withPayload(new Event(CREATE, body.getProductId(), body)).build());
+		//return body;
 	}
 
 	@Override
@@ -125,16 +168,33 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
 	}
 
 	@Override
-	public void deleteRecommendations(int productId) {
-		messageSources.outputRecommendations()
-				.send(MessageBuilder.withPayload(new Event(DELETE, productId, null)).build());
+	public Mono<Void> deleteRecommendations(int productId) {
+		DataEvent<String, Recommendation> eventPayload = new DataEvent<>(EventType.DELETE, String.valueOf(productId), null);
+		
+		Map<String, Object> headers = new HashMap<>();
+		headers.put("to_process", toProcess);		
+				
+		boolean sent = streamBridge.send(OUTPUT_RECOMMENDATIONS, createEventMessage(eventPayload, headers));
+        
+        return Mono.empty();
+        
+		//messageSources.outputRecommendations()
+			//	.send(MessageBuilder.withPayload(new Event(DELETE, productId, null)).build());
 	}
 
 	@Override
-	public Review createReview(Review body) {
-		messageSources.outputReviews()
-				.send(MessageBuilder.withPayload(new Event(CREATE, body.getProductId(), body)).build());
-		return body;
+	public Mono<Review> createReview(Review reviewPayload) {
+		
+		DataEvent<String, Review> eventPayload = new DataEvent<>(EventType.CREATE, null, reviewPayload);		
+		Map<String, Object> headers = new HashMap<>();
+		headers.put("to_process", toProcess);		
+				
+		boolean sent = streamBridge.send(OUTPUT_REVIEWS, createEventMessage(eventPayload, headers));
+		return sent ? Mono.just(reviewPayload) : Mono.error(new BadRequestException("Error streaming data"));
+		
+		//messageSources.outputReviews()
+			//	.send(MessageBuilder.withPayload(new Event(CREATE, body.getProductId(), body)).build());
+		//return body;
 	}
 
 	@Override
@@ -151,8 +211,20 @@ public class ProductCompositeIntegration implements ProductService, Recommendati
 	}
 
 	@Override
-	public void deleteReviews(int productId) {
-		messageSources.outputReviews().send(MessageBuilder.withPayload(new Event(DELETE, productId, null)).build());
+	public Mono<Void> deleteReviews(int productId) {
+		DataEvent<String, Review> eventPayload = new DataEvent<>(EventType.DELETE, String.valueOf(productId), null);
+		Map<String, Object> headers = new HashMap<>();
+		headers.put("to_process", toProcess);		
+				
+		boolean sent = streamBridge.send(OUTPUT_REVIEWS, createEventMessage(eventPayload, headers));
+        
+        return Mono.empty();
+		// messageSources.outputReviews().send(MessageBuilder.withPayload(new Event(DELETE, productId, null)).build());
+	}
+	
+	private <K, T> Message<DataEvent<K, T>> createEventMessage(DataEvent<K, T> eventPayload, Map<String, Object> headers) {
+		
+		return MessageBuilder.createMessage(eventPayload, MyMessageHeaders.createHeaders(headers));
 	}
 
 	public Mono<Health> getProductHealth() {

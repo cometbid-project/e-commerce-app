@@ -32,7 +32,7 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
-    public Review createReview(Review body) {
+    public Mono<Review> createReview(Review body) {
 
         if (body.getProductId() < 1) throw new InvalidInputException("Invalid productId: " + body.getProductId());
 
@@ -44,7 +44,7 @@ public class ReviewServiceImpl implements ReviewService {
                 ex -> new InvalidInputException("Duplicate key, Product Id: " + body.getProductId() + ", Review Id:" + body.getReviewId()))
             .map(e -> mapper.entityToApi(e));
 
-        return newEntity.block();
+        return newEntity;
         
     }
 
@@ -60,12 +60,14 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
-    public void deleteReviews(int productId) {
+    public Mono<Void> deleteReviews(int productId) {
 
         if (productId < 1) throw new InvalidInputException("Invalid productId: " + productId);
 
         log.debug("deleteReviews: tries to delete reviews for the product with productId: {}", productId);
-        repository.deleteAll(repository.findByProductId(productId)).block();
+        repository.deleteAll(repository.findByProductId(productId)).subscribe();
+        
+        return Mono.empty();
     }
 
 }
